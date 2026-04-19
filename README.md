@@ -1,116 +1,101 @@
-# 🔐 AuthCore - Módulo Central de Autenticación y Autorización Multitenant
+# 🔐 AuthCore - API REST Multitenant de Autenticación y Autorización
 
 [![Java](https://img.shields.io/badge/Java-17+-blue.svg)](https://openjdk.java.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2+-green.svg)](https://spring.io/projects/spring-boot)
 [![Security](https://img.shields.io/badge/OWASP-TOP%2010-red.svg)](https://owasp.org/www-project-top-ten/)
 [![Architecture](https://img.shields.io/badge/Architecture-Hexagonal-orange.svg)]()
 
----
-
-## 📋 Tabla de Contenidos
-
-1. [Descripción General](#-descripción-general)
-2. [Arquitectura Hexagonal](#-arquitectura-hexagonal)
-3. [Características Principales](#-características-principales)
-4. [Seguridad OWASP TOP 10](#-seguridad-owasp-top-10)
-5. [API REST - Endpoints](#-api-rest---endpoints)
-6. [Modelo de Datos](#-modelo-de-datos)
-7. [Configuración Multitenant](#-configuración-multitenant)
-8. [Instalación y Despliegue](#-instalación-y-despliegue)
-9. [Integración](#-integración)
+Módulo central reutilizable para gestión de usuarios, JWT, roles y seguridad basada en políticas con arquitectura hexagonal y cumplimiento OWASP TOP 10.
 
 ---
 
-## 🎯 Descripción General
+## 📋 Índice
 
-**AuthCore** es un módulo central de autenticación y autorización diseñado con **Arquitectura Hexagonal** para Java Spring Boot, proporcionando una solución reutilizable, escalable y segura para cualquier proyecto futuro.
-
-### Propósito
-
-- ✅ Gestión centralizada de usuarios y credenciales
-- ✅ Autenticación basada en JWT (JSON Web Tokens)
-- ✅ Sistema de roles y permisos (RBAC/ABAC/PBAC)
-- ✅ Soporte Multitenant (multi-inquilino)
-- ✅ Cumplimiento OWASP TOP 10
-- ✅ Alta disponibilidad y escalabilidad
-
-### Casos de Uso
-
-| Caso | Descripción |
-|------|-------------|
-| SSO Centralizado | Punto único de autenticación para múltiples aplicaciones |
-| Microservicios | Servicio de seguridad compartido |
-| Multi-tenant SaaS | Aislamiento de datos por cliente |
-| API Gateway Security | Validación centralizada de tokens |
+1. [Arquitectura](#-arquitectura)
+2. [Endpoints](#-endpoints)
+3. [Seguridad](#-seguridad)
+4. [Configuración](#-configuración)
+5. [Despliegue](#-despliegue)
 
 ---
 
-## 🏗️ Arquitectura Hexagonal
+## 🏗️ Arquitectura
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    ADAPTERS (Infrastructure)                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │   REST   │  │ Security │  │   JPA    │  │  Email   │    │
-│  │ Controller│  │  Filter  │  │Repository│  │ Service  │    │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘    │
-├───────┴─────────────┴─────────────┴─────────────┴───────────┤
-│                         PORTS                                │
-│  ┌─────────────────┐              ┌─────────────────────┐   │
-│  │  Input Ports    │              │   Output Ports      │   │
-│  │  (Use Cases)    │◄──────►│   (Interfaces)        │   │
-│  │ - Authenticate  │              │ - UserRepository    │   │
-│  │ - CreateUser    │              │ - RoleRepository    │   │
-│  │ - ValidateToken │              │ - TokenRepository   │   │
-│  └────────┬────────┘              └─────────────────────┘   │
-├─────────┴───────────────────────────────────────────────────┤
-│                      DOMAIN (Core Business)                  │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Entities   │  │Value Objects│  │Domain Svcs  │         │
-│  │ - User      │  │ - Email     │  │ - AuthSvc   │         │
-│  │ - Role      │  │ - Password  │  │ - PolicySvc │         │
-│  │ - Permission│  │ - JwtToken  │  │             │         │
-│  │ - Tenant    │  │ - TenantId  │  │             │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│              ADAPTERS (Infrastructure)               │
+│   REST Controller | Security Filter | JPA Repo      │
+├─────────────────────────────────────────────────────┤
+│                    PORTS                             │
+│   Input: Authenticate, CreateUser, ValidateToken    │
+│   Output: UserRepository, RoleRepository            │
+├─────────────────────────────────────────────────────┤
+│                 DOMAIN (Core)                        │
+│   Entities: User, Role, Permission, Tenant          │
+│   Value Objects: Email, Password, JwtToken          │
+└─────────────────────────────────────────────────────┘
 ```
 
-### Capas
-
-1. **Domain Layer**: Entidades de negocio puras, sin dependencias externas
-2. **Application Layer**: Casos de uso y servicios de aplicación
-3. **Infrastructure Layer**: Implementaciones concretas (adapters)
+**Capas:**
+- **Domain**: Entidades puras sin dependencias externas
+- **Application**: Casos de uso y servicios
+- **Infrastructure**: Implementaciones concretas
 
 ---
 
-## ✨ Características Principales
+## 🌐 Endpoints
+
+**Base URL:** `http://localhost:8080/api/v1`
 
 ### Autenticación
 
-| Feature | Descripción |
-|---------|-------------|
-| JWT | Tokens con firma RS256/HS512 |
-| Refresh Tokens | Rotación segura de tokens |
-| MFA | TOTP, SMS, Email |
-| OAuth2/OIDC | Proveedores externos |
-| Session Management | Control de sesiones concurrentes |
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/auth/login` | Iniciar sesión |
+| POST | `/auth/refresh` | Renovar token |
+| POST | `/auth/logout` | Cerrar sesión |
 
-### Autorización
+**Ejemplo Login:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: tenant1" \
+  -d '{"email":"user@empresa.com","password":"P@ssw0rd123!"}'
+```
 
-| Feature | Descripción |
-|---------|-------------|
-| RBAC | Role-Based Access Control |
-| ABAC | Attribute-Based Access Control |
-| PBAC | Policy-Based Access Control |
-| Permisos Granulares | Control por recurso y acción |
+**Response:**
+```json
+{
+  "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+```
 
-### Multitenancy
+### Usuarios
+```bash
+GET    /users              # Listar
+POST   /users              # Crear
+GET    /users/{id}         # Obtener
+PUT    /users/{id}         # Actualizar
+DELETE /users/{id}         # Eliminar
+```
 
-| Estrategia | Descripción |
-|------------|-------------|
-| Database per Tenant | BD aislada por tenant |
-| Schema per Tenant | Esquema separado |
-| Discriminator Column | Columna tenant_id compartida |
+### Roles y Permisos
+```bash
+GET    /roles                         # Listar roles
+POST   /roles                         # Crear rol
+POST   /users/{id}/roles              # Asignar rol
+GET    /permissions                   # Listar permisos
+POST   /permissions/check             # Verificar permiso
+```
+
+### Tenants
+```bash
+GET    /tenants            # Listar tenants
+POST   /tenants            # Crear tenant
+```
 
 ---
 
@@ -118,226 +103,20 @@
 
 | Vulnerabilidad | Mitigación |
 |----------------|------------|
-| **A01: Broken Access Control** | @PreAuthorize, PBAC, menor privilegio |
-| **A02: Cryptographic Failures** | TLS 1.3, AES-256, bcrypt/Argon2 |
-| **A03: Injection** | Prepared Statements, validación inputs |
-| **A04: Insecure Design** | Threat modeling, patrones seguros |
+| **A01: Broken Access Control** | @PreAuthorize, principio menor privilegio |
+| **A02: Cryptographic Failures** | TLS 1.3, bcrypt/Argon2 para passwords |
+| **A03: Injection** | Prepared Statements, validación de inputs |
+| **A04: Insecure Design** | Patrones seguros, threat modeling |
 | **A05: Security Misconfiguration** | Hardening, scans automáticos |
-| **A06: Vulnerable Components** | Dependabot, OWASP Dependency Check |
+| **A06: Vulnerable Components** | OWASP Dependency Check, Dependabot |
 | **A07: Auth Failures** | MFA, rate limiting, account lockout |
-| **A08: Data Integrity** | Firmas digitales, checksums |
-| **A09: Logging Failures** | Logs estructurados, auditoría |
-| **A10: SSRF** | Validación URLs, allowlisting |
+| **A08: Data Integrity** | Firmas digitales en JWT |
+| **A09: Logging Failures** | Logs estructurados, auditoría completa |
+| **A10: SSRF** | Validación de URLs, allowlisting |
 
 ---
 
-## 🌐 API REST - Endpoints
-
-### Base URL
-```
-Production: https://api.authcore.com/v1
-Development: http://localhost:8080/api/v1
-```
-
-### Autenticación
-
-#### Login
-```http
-POST /auth/login
-Content-Type: application/json
-X-Tenant-ID: tenant1
-
-{
-  "email": "usuario@empresa.com",
-  "password": "P@ssw0rd123!",
-  "mfaCode": "123456"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
-    "tokenType": "Bearer",
-    "expiresIn": 900,
-    "user": {
-      "id": "usr_123456",
-      "email": "usuario@empresa.com",
-      "roles": ["USER", "ADMIN"]
-    }
-  }
-}
-```
-
-#### Refresh Token
-```http
-POST /auth/refresh
-Content-Type: application/json
-
-{"refreshToken": "..."}
-```
-
-#### Logout
-```http
-POST /auth/logout
-Authorization: Bearer {accessToken}
-```
-
-### Usuarios
-
-```http
-GET  /users?page=0&size=20           # Listar
-POST /users                           # Crear
-GET  /users/{userId}                  # Obtener
-PUT  /users/{userId}                  # Actualizar
-DELETE /users/{userId}                # Eliminar (soft delete)
-```
-
-### Roles
-
-```http
-GET  /roles                           # Listar roles
-POST /roles                           # Crear rol
-POST /users/{userId}/roles            # Asignar rol
-DELETE /users/{userId}/roles/{role}   # Remover rol
-```
-
-### Permisos
-
-```http
-GET  /permissions                     # Listar permisos
-POST /permissions/check               # Verificar permiso
-```
-
-### Tenants
-
-```http
-GET  /tenants                         # Listar tenants
-POST /tenants                         # Crear tenant
-```
-
----
-
-## 💾 Modelo de Datos
-
-```sql
--- Tenants
-CREATE TABLE tenants (
-    id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    domain VARCHAR(255) UNIQUE,
-    status VARCHAR(20) DEFAULT 'ACTIVE',
-    config JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Usuarios
-CREATE TABLE users (
-    id VARCHAR(50) PRIMARY KEY,
-    tenant_id VARCHAR(50) REFERENCES tenants(id),
-    email VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    enabled BOOLEAN DEFAULT true,
-    mfa_enabled BOOLEAN DEFAULT false,
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(tenant_id, email)
-);
-
--- Roles
-CREATE TABLE roles (
-    id VARCHAR(50) PRIMARY KEY,
-    tenant_id VARCHAR(50) REFERENCES tenants(id),
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    UNIQUE(tenant_id, name)
-);
-
--- Permisos
-CREATE TABLE permissions (
-    id VARCHAR(50) PRIMARY KEY,
-    tenant_id VARCHAR(50) REFERENCES tenants(id),
-    name VARCHAR(100) NOT NULL,
-    resource VARCHAR(255) NOT NULL,
-    action VARCHAR(50) NOT NULL,
-    UNIQUE(tenant_id, name)
-);
-
--- Relaciones
-CREATE TABLE user_roles (
-    user_id VARCHAR(50) REFERENCES users(id),
-    role_id VARCHAR(50) REFERENCES roles(id),
-    PRIMARY KEY (user_id, role_id)
-);
-
-CREATE TABLE role_permissions (
-    role_id VARCHAR(50) REFERENCES roles(id),
-    permission_id VARCHAR(50) REFERENCES permissions(id),
-    PRIMARY KEY (role_id, permission_id)
-);
-
--- Auditoría
-CREATE TABLE audit_logs (
-    id VARCHAR(50) PRIMARY KEY,
-    tenant_id VARCHAR(50) NOT NULL,
-    user_id VARCHAR(50),
-    action VARCHAR(100),
-    status VARCHAR(20),
-    details JSONB,
-    ip_address INET,
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-```
-
----
-
-## 🏢 Configuración Multitenant
-
-### Estrategias
-
-```yaml
-# Database per Tenant
-multitenant:
-  strategy: DATABASE_PER_TENANT
-  datasource:
-    master: jdbc:postgresql://localhost:5432/auth_master
-
-# Schema per Tenant
-multitenant:
-  strategy: SCHEMA_PER_TENANT
-  default-schema: public
-
-# Discriminator Column
-multitenant:
-  strategy: DISCRIMINATOR_COLUMN
-  column-name: tenant_id
-```
-
-### Resolución de Tenant
-
-| Método | Ejemplo |
-|--------|---------|
-| Subdominio | tenant1.api.authcore.com |
-| Header HTTP | X-Tenant-ID: tenant1 |
-| JWT Claim | claim: tenant_id |
-| Path Parameter | /api/v1/tenants/{tenantId}/users |
-
----
-
-## 🚀 Instalación y Despliegue
-
-### Prerrequisitos
-
-- Java JDK 17+
-- Maven 3.8+
-- PostgreSQL 14+
-- Redis 7.0+ (opcional)
-- Docker 20+
+## ⚙️ Configuración
 
 ### Variables de Entorno
 
@@ -348,25 +127,46 @@ DB_PORT=5432
 DB_NAME=authcore
 DB_USERNAME=authcore_user
 DB_PASSWORD=ChangeMe123!
-REDIS_HOST=localhost
-JWT_SECRET=change-this-to-very-long-random-secret-minimum-256-bits
+JWT_SECRET=change-to-very-long-random-secret-minimum-256-bits
 JWT_EXPIRATION_MS=900000
 MULTITENANT_STRATEGY=SCHEMA_PER_TENANT
 ```
 
-### Instalación Local
+### Estrategias Multitenant
+
+| Estrategia | Descripción | Uso recomendado |
+|------------|-------------|-----------------|
+| DATABASE_PER_TENANT | BD aislada por tenant | Máximo aislamiento |
+| SCHEMA_PER_TENANT | Esquema separado | Balance costo/aislamiento |
+| DISCRIMINATOR_COLUMN | Columna tenant_id | Bajo costo, menos aislamiento |
+
+### Resolución de Tenant
+
+- **Header HTTP:** `X-Tenant-ID: tenant1`
+- **Subdominio:** `tenant1.api.authcore.com`
+- **JWT Claim:** `tenant_id`
+
+---
+
+## 🚀 Despliegue
+
+### Prerrequisitos
+- Java JDK 17+
+- PostgreSQL 14+
+- Maven 3.8+
+- Docker 20+ (opcional)
+
+### Local
 
 ```bash
 git clone https://github.com/tu-organizacion/auth-core.git
 cd auth-core
-
 mvn clean install -DskipTests
 mvn flyway:migrate -Dspring.profiles.active=dev
 mvn spring-boot:run -Dspring.profiles.active=dev
-
-# Verificar
-curl http://localhost:8080/actuator/health
 ```
+
+Verificar: `curl http://localhost:8080/actuator/health`
 
 ### Docker Compose
 
@@ -395,14 +195,13 @@ services:
 docker-compose up -d
 ```
 
-### Kubernetes
+### Kubernetes (Deploy mínimo)
 
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: authcore
-  namespace: auth-system
 spec:
   replicas: 3
   selector:
@@ -427,42 +226,24 @@ spec:
               path: /actuator/health/liveness
               port: 8080
             initialDelaySeconds: 60
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: 8080
-            initialDelaySeconds: 30
 ```
-
-### CI/CD Pipeline
-
-El pipeline incluye:
-- Build y tests unitarios
-- SonarQube analysis
-- OWASP Dependency Check
-- Trivy security scan
-- Build y push Docker image
-- Deploy a Kubernetes
 
 ---
 
-## 🔌 Integración
+## 🔌 Integración Rápida
 
-### Cliente Java (WebClient)
+### Java (WebClient)
 
 ```java
 @Component
 public class AuthCoreClient {
-    
     private final WebClient webClient;
     
-    public AuthCoreClient(@Value("${authcore.base-url}") String baseUrl) {
-        this.webClient = WebClient.builder()
-            .baseUrl(baseUrl)
-            .build();
+    public AuthCoreClient(String baseUrl) {
+        this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
     
-    public AuthResponse authenticate(String email, String password) {
+    public AuthResponse login(String email, String password) {
         return webClient.post()
             .uri("/auth/login")
             .bodyValue(new LoginRequest(email, password))
@@ -473,103 +254,52 @@ public class AuthCoreClient {
 }
 ```
 
-### Cliente Node.js (Axios)
+### Node.js (Axios)
 
 ```javascript
-const axios = require('axios');
+const client = axios.create({
+  baseURL: 'https://api.authcore.com/v1',
+  headers: { 'X-Tenant-ID': 'tenant1' }
+});
 
-class AuthCoreClient {
-  constructor(baseUrl, tenantId) {
-    this.client = axios.create({
-      baseURL: baseUrl,
-      headers: { 'X-Tenant-ID': tenantId }
-    });
-  }
-  
-  async login(email, password) {
-    const response = await this.client.post('/auth/login', {
-      email, password
-    });
-    this.accessToken = response.data.data.accessToken;
-    return response.data;
-  }
-}
+const response = await client.post('/auth/login', {
+  email: 'user@empresa.com',
+  password: 'P@ssw0rd123!'
+});
 ```
 
 ---
 
 ## 📊 Monitoreo
 
-### Actuator Endpoints
+**Actuator Endpoints:**
+- `/actuator/health` - Salud general
+- `/actuator/health/liveness` - Liveness probe (K8s)
+- `/actuator/health/readiness` - Readiness probe (K8s)
+- `/actuator/metrics` - Métricas Prometheus
 
-| Endpoint | Descripción |
-|----------|-------------|
-| /actuator/health | Salud de la aplicación |
-| /actuator/health/liveness | Liveness probe (K8s) |
-| /actuator/health/readiness | Readiness probe (K8s) |
-| /actuator/metrics | Métricas |
-| /actuator/prometheus | Formato Prometheus |
-
-### Métricas Principales
-
-- `auth_login_total`: Total logins
-- `auth_login_failure_total`: Logins fallidos
-- `auth_token_validation_total`: Validaciones de token
-- `http_requests_total`: Peticiones HTTP
+**Métricas clave:** `auth_login_total`, `auth_login_failure_total`, `auth_token_validation_total`
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# Tests unitarios
-mvn test
-
-# Tests de integración
-mvn verify -DskipUnitTests
-
-# Cobertura
-mvn jacoco:report
+mvn test                    # Tests unitarios
+mvn verify                  # Tests integración
+mvn jacoco:report           # Cobertura (mínimo 80%)
 ```
-
-Cobertura mínima requerida: 80%
-
----
-
-## 🤝 Contribución
-
-1. Fork el repositorio
-2. Crea rama feature (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'feat: add AmazingFeature'`)
-4. Push (`git push origin feature/AmazingFeature`)
-5. Abre Pull Request
-
-### Convenciones
-
-- Java: Google Java Style Guide
-- Commits: Conventional Commits
-- Tests: Cobertura mínima 80%
 
 ---
 
 ## 📄 Licencia
 
-MIT License - Ver archivo LICENSE
-
----
-
-## 📞 Soporte
-
-- **Docs**: https://docs.authcore.com
-- **API**: https://api.authcore.com/swagger-ui.html
-- **Email**: support@authcore.com
+MIT License
 
 ---
 
 <div align="center">
 
-**AuthCore** - Autenticación y Autorización Seguro y Escalable
-
-Hecho con ❤️ para la comunidad de desarrollo
+**AuthCore** - Módulo de seguridad reutilizable para cualquier proyecto
 
 </div>
